@@ -7,6 +7,8 @@ import android.location.Location
 import androidx.core.content.ContextCompat
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
+import com.google.android.gms.common.GoogleApiAvailability
+import com.google.android.gms.common.ConnectionResult
 
 import kotlin.math.*
 
@@ -19,6 +21,12 @@ class LocationService(private val context: Context) {
         onError: (Exception) -> Unit
     ) {
         try {
+            val gmsAvailable = GoogleApiAvailability.getInstance()
+                .isGooglePlayServicesAvailable(context) == ConnectionResult.SUCCESS
+            if (!gmsAvailable) {
+                onError(Exception("Google Play Services 가용하지 않음"))
+                return
+            }
             if (ContextCompat.checkSelfPermission(
                     context,
                     Manifest.permission.ACCESS_FINE_LOCATION

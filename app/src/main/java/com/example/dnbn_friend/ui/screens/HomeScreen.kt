@@ -16,13 +16,26 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.layout.ContentScale
 import com.example.dnbn_friend.viewmodel.AuthViewModel
 import com.example.dnbn_friend.viewmodel.SurveyViewModel
+import com.example.dnbn_friend.viewmodel.BannerViewModel
+import com.example.dnbn_friend.model.Banner
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.dnbn_friend.ui.components.AutoSlidingCarousel
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import androidx.compose.runtime.LaunchedEffect
+import com.example.dnbn_friend.data.BannerRepository
 
 @Composable
 fun HomeScreen(
     authViewModel: AuthViewModel,
-    surveyViewModel: SurveyViewModel
+    surveyViewModel: SurveyViewModel,
+    onOpenPhoneRecommendationSurvey: () -> Unit = {},
+    onStartSurvey: () -> Unit = {},
+    onBannerClick: (Banner) -> Unit = {}
 ) {
     val currentUser by authViewModel.currentUser.collectAsState()
     
@@ -58,12 +71,50 @@ fun HomeScreen(
         }
         
         Spacer(modifier = Modifier.height(32.dp))
+
+        // 배너 캐러셀
+        val bannerViewModel: BannerViewModel = viewModel()
+        LaunchedEffect(Unit) {
+            bannerViewModel.load(BannerRepository())
+        }
+        val banners by bannerViewModel.banners.collectAsState()
+        if (banners.isNotEmpty()) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                AutoSlidingCarousel(
+                    itemsCount = banners.size,
+                    itemHeight = 180.dp
+                ) { index ->
+                    val banner = banners[index]
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(180.dp)
+                            .clickable { onBannerClick(banner) }
+                    ) {
+                        AsyncImage(
+                            model = ImageRequest.Builder(LocalContext.current)
+                                .data(banner.imageUrl)
+                                .build(),
+                            contentDescription = banner.title,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(180.dp)
+                        )
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(24.dp))
+        }
         
-        // 추천 시작 카드
+        // 추천 시작 카드 (클릭 시 네비게이션으로 설문 진입)
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable { surveyViewModel.startSurvey() },
+                .clickable { onStartSurvey() },
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary)
         ) {
@@ -95,6 +146,17 @@ fun HomeScreen(
         }
         
         Spacer(modifier = Modifier.height(24.dp))
+        
+        // 별도 진행용 휴대폰 추천 설문조사 버튼
+        Button(
+            onClick = onOpenPhoneRecommendationSurvey,
+            modifier = Modifier
+                .fillMaxWidth()
+        ) {
+            Text("휴대폰 추천 설문조사")
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
         
         // 사용자 선호도 카드
         if (currentUser?.phonePreferences?.isNotEmpty() == true) {

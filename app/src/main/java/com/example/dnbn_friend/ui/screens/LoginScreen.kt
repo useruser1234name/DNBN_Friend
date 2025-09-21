@@ -47,7 +47,7 @@ fun LoginScreen(
             borderColor = Color.LightGray,
             onClick = { 
                 authViewModel.loginWithSocial("google")
-                surveyViewModel.startSurvey()
+                surveyViewModel.resetSurvey()
             }
         )
         
@@ -59,7 +59,7 @@ fun LoginScreen(
             textColor = Color(0xFF3C1E1E),
             onClick = { 
                 authViewModel.loginWithSocial("kakao")
-                surveyViewModel.startSurvey()
+                surveyViewModel.resetSurvey()
             }
         )
         
@@ -71,7 +71,7 @@ fun LoginScreen(
             textColor = Color.White,
             onClick = { 
                 authViewModel.loginWithSocial("naver")
-                surveyViewModel.startSurvey()
+                surveyViewModel.resetSurvey()
             }
         )
     }

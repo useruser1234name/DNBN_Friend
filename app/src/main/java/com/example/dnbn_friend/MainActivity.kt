@@ -28,6 +28,7 @@ import com.example.dnbn_friend.navigation.Screen
 import com.example.dnbn_friend.model.Phone
 import com.example.dnbn_friend.ui.screens.HomeScreen
 import com.example.dnbn_friend.ui.screens.LoginScreen
+import com.example.dnbn_friend.ui.screens.PhoneRecommendationSurveyScreen
 import com.example.dnbn_friend.ui.screens.SubsidySurveyScreen
 import com.example.dnbn_friend.ui.screens.ResultScreen
 import com.example.dnbn_friend.ui.screens.SurveyScreen
@@ -35,16 +36,35 @@ import com.example.dnbn_friend.ui.screens.StoreDetailScreen
 import com.example.dnbn_friend.ui.screens.SubsidyResultScreen
 import com.example.dnbn_friend.ui.screens.PhoneListScreen
 import com.example.dnbn_friend.ui.screens.PurchaseMethodBottomSheet
+import com.example.dnbn_friend.ui.screens.PhoneIntroScreen
 import com.example.dnbn_friend.ui.theme.SmartphoneRecommenderTheme
 import com.example.dnbn_friend.viewmodel.AuthViewModel
 import com.example.dnbn_friend.viewmodel.LocationViewModel
 import com.example.dnbn_friend.viewmodel.SurveyViewModel
 import com.example.dnbn_friend.service.ConsultationService
 import com.example.dnbn_friend.model.ConsultationRequest
+import com.google.firebase.ktx.Firebase
+import com.google.firebase.auth.ktx.auth
+import com.google.firebase.firestore.ktx.firestore
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.launch
+import com.example.dnbn_friend.data.FirestoreSeeder
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Firebase 익명 로그인 (Storage/Firestore 접근 안정화)
+        try {
+            if (Firebase.auth.currentUser == null) {
+                Firebase.auth.signInAnonymously()
+            }
+        } catch (_: Exception) {}
+        // 초기 데이터 시드 (1회성 실행을 기대, 중복 시 덮어쓰기/무시)
+        MainScope().launch {
+            try {
+                FirestoreSeeder.seedAll(Firebase.firestore)
+            } catch (_: Exception) {}
+        }
         setContent {
             SmartphoneRecommenderTheme {
                 Surface(
@@ -84,18 +104,28 @@ fun MainNavigation() {
         }
 
         composable(Screen.Home.route) {
-            val currentStep = surveyViewModel.currentStep
             HomeScreen(
                 authViewModel = authViewModel,
-                surveyViewModel = surveyViewModel
-            )
-            androidx.compose.runtime.LaunchedEffect(currentStep) {
-                if (currentStep in 1..6) {
+                surveyViewModel = surveyViewModel,
+                onOpenPhoneRecommendationSurvey = {
+                    navController.navigate(Screen.PhoneRecommendationSurvey.route)
+                },
+                onStartSurvey = {
+                    surveyViewModel.startSurvey()
                     navController.navigate(Screen.Survey.route)
-                } else if (currentStep == 7) {
-                    navController.navigate(Screen.PhoneList.route)
+                },
+                onBannerClick = { banner ->
+                    // 배너가 오늘의 휴대폰을 가리키면 내부 인트로 화면으로 이동
+                    val phoneId = banner.deeplink ?: ""
+                    if (phoneId.isNotEmpty()) {
+                        navController.navigate(Screen.PhoneIntro.createRoute(phoneId))
+                    }
                 }
-            }
+            )
+        }
+
+        composable(Screen.PhoneRecommendationSurvey.route) {
+            PhoneRecommendationSurveyScreen()
         }
 
         composable(Screen.Survey.route) {
@@ -201,6 +231,39 @@ fun MainNavigation() {
                     navController.navigate(Screen.StoreDetail.createRoute(store.id))
                 }
             )
+        }
+
+        composable(
+            route = Screen.PhoneIntro.route,
+            arguments = listOf(
+                navArgument("phoneId") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val phoneId = backStackEntry.arguments?.getString("phoneId") ?: ""
+            val context = LocalContext.current
+            var showSheet by remember { mutableStateOf(false) }
+            PhoneIntroScreen(
+                phoneId = phoneId,
+                onPurchaseClick = { showSheet = true }
+            )
+            if (showSheet) {
+                val phone = DataRepository.phones.find { it.id == phoneId }
+                PurchaseMethodBottomSheet(
+                    onDismiss = { showSheet = false },
+                    onSelectSimFree = {
+                        val url = phone?.shopUrl
+                        if (!url.isNullOrEmpty()) {
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                            context.startActivity(intent)
+                        }
+                        showSheet = false
+                    },
+                    onSelectSubsidy = {
+                        navController.navigate(Screen.SubsidySurvey.createRoute(phoneId))
+                        showSheet = false
+                    }
+                )
+            }
         }
     }
 }

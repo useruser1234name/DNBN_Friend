@@ -6,6 +6,7 @@ sealed class Screen(val route: String) {
     object Survey : Screen("survey")
     object Result : Screen("result")
     object PhoneList : Screen("phone_list")
+    object PhoneRecommendationSurvey : Screen("phone_recommendation_survey")
     object PurchaseMethod : Screen("purchase_method/{phoneId}") {
         fun createRoute(phoneId: String) = "purchase_method/$phoneId"
     }
@@ -17,6 +18,9 @@ sealed class Screen(val route: String) {
     }
     object StoreDetail : Screen("store_detail/{storeId}") {
         fun createRoute(storeId: String) = "store_detail/$storeId"
+    }
+    object PhoneIntro : Screen("phone_intro/{phoneId}") {
+        fun createRoute(phoneId: String) = "phone_intro/$phoneId"
     }
 }
 

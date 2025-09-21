@@ -7,9 +7,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
 import com.example.dnbn_friend.data.DataRepository
 import com.example.dnbn_friend.model.*
 import com.example.dnbn_friend.service.LocationService
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -276,5 +280,34 @@ class SurveyViewModel : ViewModel() {
             .sortedByDescending { it.second }
             .map { it.first }
             .take(limit)
+    }
+}
+
+class BannerViewModel : ViewModel() {
+    private val _banners = MutableStateFlow<List<Banner>>(emptyList())
+    val banners: StateFlow<List<Banner>> = _banners.asStateFlow()
+
+    fun load(repository: com.example.dnbn_friend.data.BannerRepository) {
+        viewModelScope.launch {
+            runCatching { repository.fetchBanners() }
+                .onSuccess { list -> _banners.value = list }
+                .onFailure { e ->
+                    println("Banner load error: ${e.message}")
+                    _banners.value = emptyList()
+                }
+        }
+    }
+}
+
+class TodayPhoneViewModel : ViewModel() {
+    private val _items = MutableStateFlow<List<TodayPhone>>(emptyList())
+    val items: StateFlow<List<TodayPhone>> = _items.asStateFlow()
+
+    fun load(repo: com.example.dnbn_friend.data.TodayPhoneRepository) {
+        viewModelScope.launch {
+            runCatching { repo.fetchTodayPhones() }
+                .onSuccess { list -> _items.value = list }
+                .onFailure { _items.value = emptyList() }
+        }
     }
 }
