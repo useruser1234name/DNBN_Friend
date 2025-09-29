@@ -5,6 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -22,6 +23,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.google.android.gms.security.ProviderInstaller
+import com.google.android.gms.common.ConnectionResult
+import com.google.android.gms.common.GoogleApiAvailability
 import com.example.dnbn_friend.data.DataRepository
 import com.example.dnbn_friend.navigation.NavArguments
 import com.example.dnbn_friend.navigation.Screen
@@ -39,39 +43,31 @@ import com.example.dnbn_friend.ui.screens.PurchaseMethodBottomSheet
 import com.example.dnbn_friend.ui.screens.PhoneIntroScreen
 import com.example.dnbn_friend.ui.theme.SmartphoneRecommenderTheme
 import com.example.dnbn_friend.viewmodel.AuthViewModel
+import com.example.dnbn_friend.viewmodel.AppViewModel
 import com.example.dnbn_friend.viewmodel.LocationViewModel
 import com.example.dnbn_friend.viewmodel.SurveyViewModel
 import com.example.dnbn_friend.service.ConsultationService
 import com.example.dnbn_friend.model.ConsultationRequest
-import com.google.firebase.ktx.Firebase
-import com.google.firebase.auth.ktx.auth
-import com.google.firebase.firestore.ktx.firestore
-import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.launch
-import com.example.dnbn_friend.data.FirestoreSeeder
+ 
 
 class MainActivity : ComponentActivity() {
+    private val appViewModel: AppViewModel by viewModels()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Firebase 익명 로그인 (Storage/Firestore 접근 안정화)
-        try {
-            if (Firebase.auth.currentUser == null) {
-                Firebase.auth.signInAnonymously()
-            }
-        } catch (_: Exception) {}
-        // 초기 데이터 시드 (1회성 실행을 기대, 중복 시 덮어쓰기/무시)
-        MainScope().launch {
-            try {
-                FirestoreSeeder.seedAll(Firebase.firestore)
-            } catch (_: Exception) {}
+        // 구형/특수 기기: 보안 프로바이더 업데이트는 GMS 가용 시에만 시도
+        val gmsStatus = GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(this)
+        if (gmsStatus == ConnectionResult.SUCCESS) {
+            runCatching { ProviderInstaller.installIfNeeded(applicationContext) }
         }
+        // 앱 시작 직후 데이터 프리패치 시작
+        appViewModel.prefetch()
         setContent {
             SmartphoneRecommenderTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    MainNavigation()
+                    MainNavigation(appViewModel)
                 }
             }
         }
@@ -79,13 +75,16 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun MainNavigation() {
+fun MainNavigation(appViewModel: AppViewModel) {
     val navController = rememberNavController()
     val authViewModel: AuthViewModel = viewModel()
     val surveyViewModel: SurveyViewModel = viewModel()
     val locationViewModel: LocationViewModel = viewModel(
         factory = LocationViewModel.provideFactory(LocalContext.current)
     )
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        appViewModel.prefetch()
+    }
 
     NavHost(navController = navController, startDestination = Screen.Login.route) {
         composable(Screen.Login.route) {
@@ -125,7 +124,12 @@ fun MainNavigation() {
         }
 
         composable(Screen.PhoneRecommendationSurvey.route) {
-            PhoneRecommendationSurveyScreen()
+            PhoneRecommendationSurveyScreen(
+                onStart = {
+                    surveyViewModel.startSurvey()
+                    navController.navigate(Screen.Survey.route)
+                }
+            )
         }
 
         composable(Screen.Survey.route) {

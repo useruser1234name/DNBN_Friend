@@ -73,12 +73,13 @@ dependencies {
     // Coil for image loading
     implementation("io.coil-kt:coil-compose:2.5.0")
 
-    // Firebase (BOM)
+    // Firebase
     implementation(platform("com.google.firebase:firebase-bom:33.5.1"))
-    implementation("com.google.firebase:firebase-firestore-ktx")
     implementation("com.google.firebase:firebase-auth-ktx")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.8.1")
-    implementation ("com.google.firebase:firebase-storage")
+    implementation("com.google.firebase:firebase-firestore-ktx")
+    implementation("com.google.firebase:firebase-storage-ktx")
+    implementation("com.google.firebase:firebase-appcheck-ktx")
+    debugImplementation("com.google.firebase:firebase-appcheck-debug:17.1.0")
 
     // ViewModel
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
@@ -86,6 +87,8 @@ dependencies {
 
     // Location Services
     implementation("com.google.android.gms:play-services-location:21.1.0")
+    // Google Play Services Base (ProviderInstaller 사용)
+    implementation("com.google.android.gms:play-services-base:18.5.0")
 
     // Testing
     testImplementation("junit:junit:4.13.2")

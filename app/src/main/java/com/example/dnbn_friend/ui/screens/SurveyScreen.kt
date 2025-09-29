@@ -7,6 +7,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -15,6 +16,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.dnbn_friend.viewmodel.SurveyViewModel
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 
 @Composable
 fun SurveyScreen(viewModel: SurveyViewModel) {
@@ -88,9 +95,9 @@ fun ProgressIndicator(currentStep: Int, totalSteps: Int) {
             progress = { currentStep.toFloat() / totalSteps },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(8.dp),
+                .height(10.dp),
             color = MaterialTheme.colorScheme.primary,
-            trackColor = Color.LightGray
+            trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
         )
     }
 }
@@ -116,7 +123,7 @@ fun SelectionCard(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp),
+                .padding(18.dp),
             contentAlignment = Alignment.Center
         ) {
             Text(
@@ -140,11 +147,10 @@ fun QuestionLayout(
     Column {
         Text(
             text = title,
-            fontSize = 22.sp,
+            fontSize = 24.sp,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 24.dp)
+            modifier = Modifier.padding(bottom = 16.dp)
         )
-        
         options.forEach { option ->
             SelectionCard(
                 text = option,
@@ -206,39 +212,51 @@ fun BudgetQuestion(viewModel: SurveyViewModel) {
     )
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun BrandQuestion(viewModel: SurveyViewModel) {
     Text(
         text = "선호하는 브랜드를 선택하세요 (복수 선택 가능)",
-        fontSize = 22.sp,
+        fontSize = 24.sp,
         fontWeight = FontWeight.Bold,
-        modifier = Modifier.padding(bottom = 24.dp)
+        modifier = Modifier.padding(bottom = 16.dp)
     )
     val brands = listOf("Apple", "Samsung", "Google", "Nothing", "OnePlus", "Xiaomi")
-    brands.forEach { brand ->
-        SelectionCard(
-            text = brand,
-            isSelected = brand in viewModel.selectedBrands,
-            onClick = { viewModel.toggleBrand(brand) }
-        )
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        brands.forEach { brand ->
+            FilterChip(
+                selected = brand in viewModel.selectedBrands,
+                onClick = { viewModel.toggleBrand(brand) },
+                label = { Text(brand) }
+            )
+        }
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun PurposeQuestion(viewModel: SurveyViewModel) {
     Text(
         text = "주요 사용 목적을 선택하세요 (복수 선택 가능)",
-        fontSize = 22.sp,
+        fontSize = 24.sp,
         fontWeight = FontWeight.Bold,
-        modifier = Modifier.padding(bottom = 24.dp)
+        modifier = Modifier.padding(bottom = 16.dp)
     )
     val purposes = listOf("게임", "사진/영상", "영상", "업무/공부", "SNS", "통화/문자", "배터리 지속")
-    purposes.forEach { p ->
-        SelectionCard(
-            text = p,
-            isSelected = p in viewModel.selectedPurposes,
-            onClick = { viewModel.togglePurpose(p) }
-        )
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        purposes.forEach { p ->
+            FilterChip(
+                selected = p in viewModel.selectedPurposes,
+                onClick = { viewModel.togglePurpose(p) },
+                label = { Text(p) }
+            )
+        }
     }
 }
 

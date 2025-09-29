@@ -21,6 +21,7 @@ import androidx.compose.ui.layout.ContentScale
 import com.example.dnbn_friend.viewmodel.AuthViewModel
 import com.example.dnbn_friend.viewmodel.SurveyViewModel
 import com.example.dnbn_friend.viewmodel.BannerViewModel
+import com.example.dnbn_friend.viewmodel.AppViewModel
 import com.example.dnbn_friend.model.Banner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.dnbn_friend.ui.components.AutoSlidingCarousel
@@ -28,6 +29,11 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import androidx.compose.runtime.LaunchedEffect
 import com.example.dnbn_friend.data.BannerRepository
+import com.google.android.gms.common.ConnectionResult
+import com.google.android.gms.common.GoogleApiAvailability
+import androidx.compose.foundation.background
+import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.Brush
 
 @Composable
 fun HomeScreen(
@@ -72,12 +78,9 @@ fun HomeScreen(
         
         Spacer(modifier = Modifier.height(32.dp))
 
-        // 배너 캐러셀
-        val bannerViewModel: BannerViewModel = viewModel()
-        LaunchedEffect(Unit) {
-            bannerViewModel.load(BannerRepository())
-        }
-        val banners by bannerViewModel.banners.collectAsState()
+        // 앱 전역 선로딩 결과 사용: 중복 로드를 피하고 초기 표시를 빠르게
+        val appViewModel: AppViewModel = viewModel()
+        val banners by appViewModel.banners.collectAsState()
         if (banners.isNotEmpty()) {
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -85,13 +88,13 @@ fun HomeScreen(
             ) {
                 AutoSlidingCarousel(
                     itemsCount = banners.size,
-                    itemHeight = 180.dp
+                    itemHeight = 360.dp
                 ) { index ->
                     val banner = banners[index]
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(180.dp)
+                            .height(360.dp)
                             .clickable { onBannerClick(banner) }
                     ) {
                         AsyncImage(
@@ -102,7 +105,7 @@ fun HomeScreen(
                             contentScale = ContentScale.Crop,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(180.dp)
+                                .height(360.dp)
                         )
                     }
                 }
@@ -116,32 +119,47 @@ fun HomeScreen(
                 .fillMaxWidth()
                 .clickable { onStartSurvey() },
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary)
+            colors = CardDefaults.cardColors(containerColor = Color.Transparent)
         ) {
-            Column(
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .height(160.dp)
+                    .background(
+                        Brush.linearGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.primary,
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+                            )
+                        )
+                    )
             ) {
-                Icon(
-                    Icons.Default.Search,
-                    contentDescription = null,
-                    modifier = Modifier.size(48.dp),
-                    tint = Color.White
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = "스마트폰 추천받기",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-                Text(
-                    text = "6개의 간단한 질문으로 찾아드려요",
-                    fontSize = 14.sp,
-                    color = Color.White.copy(alpha = 0.9f)
-                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(24.dp),
+                    horizontalAlignment = Alignment.Start,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        Icons.Default.Search,
+                        contentDescription = null,
+                        modifier = Modifier.size(36.dp),
+                        tint = Color.White
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "스마트폰 추천받기",
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                    Text(
+                        text = "6개의 간단한 질문으로 최적 기종 추천",
+                        fontSize = 13.sp,
+                        color = Color.White.copy(alpha = 0.9f)
+                    )
+                }
             }
         }
         

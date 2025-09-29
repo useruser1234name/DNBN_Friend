@@ -7,6 +7,8 @@
         <package android:name="com.google.android.apps.maps" />
         <package android:name="com.nhn.android.nmap" />
         <package android:name="net.daum.android.map" />
+        <!-- Google Play Services 패키지 가시성 (일부 기기에서 가용성 체크/내부 호출 시 필요) -->
+        <package android:name="com.google.android.gms" />
     </queries>
 
     <uses-permission android:name="android.permission.INTERNET" />
@@ -22,7 +24,9 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.DNBN_Friend"
+        android:name=".MyApp"
         tools:targetApi="31">
+        
         <activity
             android:name=".MainActivity"
             android:exported="true"
