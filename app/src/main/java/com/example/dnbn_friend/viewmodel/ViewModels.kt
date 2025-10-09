@@ -123,6 +123,64 @@ class SurveyViewModel : ViewModel() {
 
     // 사용자가 PhoneList에서 고른 기종
     var selectedPhoneId by mutableStateOf<String?>(null)
+
+    // --- 확장 설문 상태 (세분화) ---
+    var brandPriority by mutableStateOf(
+        mapOf(
+            "Apple" to 0, "Samsung" to 0, "Google" to 0,
+            "Nothing" to 0, "OnePlus" to 0, "Xiaomi" to 0
+        )
+    )
+        private set
+
+    data class PurposePrefs(
+        val gaming: Int = 0,
+        val photo: Int = 0,
+        val videoStream: Int = 0,
+        val workStudy: Int = 0,
+        val sns: Int = 0,
+        val callText: Int = 0,
+        val batteryLife: Int = 0,
+        val ruggedness: Int = 0,
+        val aiFeatures: Int = 0
+    )
+    var purposePrefs by mutableStateOf(PurposePrefs())
+        private set
+
+    data class ScreenPrefs(
+        val minInch: Float = 6.0f,
+        val maxInch: Float = 6.9f,
+        val weightImportance: Int = 50,
+        val oneHandUse: Int = 50,
+        val flatDisplay: Boolean = true,
+        val highRefresh: Boolean = true,
+        val pwmSensitive: Boolean = false
+    )
+    var screenPrefs by mutableStateOf(ScreenPrefs())
+        private set
+
+    enum class CameraSubject { People, Kids, Pets, Food, Landscape, City, NightSky, Sports, Documents }
+    enum class ColorTone { Natural, Vivid, Contrast, Warm, Cool }
+    enum class ShootingStyle { PointAndShoot, SocialReady, ProManualRaw }
+    enum class VideoRes { R4K30, R4K60, R4K120, R8K24 }
+
+    data class CameraPrefs(
+        val subjects: Set<CameraSubject> = emptySet(),
+        val zoomImportance: Int = 50,
+        val macroImportance: Int = 30,
+        val portraitImportance: Int = 60,
+        val nightImportance: Int = 60,
+        val afTrackingImportance: Int = 50,
+        val oisEisImportance: Int = 60,
+        val requiredOpticalZoomX: Int = 3,
+        val colorTone: ColorTone = ColorTone.Natural,
+        val shootingStyle: ShootingStyle = ShootingStyle.PointAndShoot,
+        val videoResolution: VideoRes = VideoRes.R4K60,
+        val hdrVideo: Boolean = true,
+        val stabilizationPriority: Boolean = true
+    )
+    var cameraPrefs by mutableStateOf(CameraPrefs())
+        private set
     
     fun updateAnswer(step: Int, answer: String) {
         surveyAnswer = when (step) {
@@ -163,9 +221,10 @@ class SurveyViewModel : ViewModel() {
     }
     
     fun nextStep() {
-        if (currentStep < 6) {
+        // 총 5단계로 조정 (OS 질문 제거)
+        if (currentStep < 5) {
             currentStep++
-        } else if (currentStep == 6) {
+        } else if (currentStep == 5) {
             saveSurveyResult()
             currentStep = 7
         }
@@ -281,6 +340,37 @@ class SurveyViewModel : ViewModel() {
             .map { it.first }
             .take(limit)
     }
+
+    // --- 확장 설문 업데이트/검증 유틸 ---
+    fun setBrandScore(brand: String, score: Int) {
+        val mutable = brandPriority.toMutableMap()
+        mutable[brand] = score.coerceIn(0, 100)
+        brandPriority = mutable.toMap()
+    }
+
+    fun updatePurpose(update: PurposePrefs.() -> PurposePrefs) {
+        purposePrefs = purposePrefs.update()
+    }
+
+    fun updateScreen(update: ScreenPrefs.() -> ScreenPrefs) {
+        screenPrefs = screenPrefs.update()
+    }
+
+    fun updateCamera(update: CameraPrefs.() -> CameraPrefs) {
+        cameraPrefs = cameraPrefs.update()
+    }
+
+    fun isBrandValid(): Boolean = brandPriority.values.any { it >= 30 }
+
+    fun isPurposeValid(): Boolean = listOf(
+        purposePrefs.gaming, purposePrefs.photo, purposePrefs.videoStream,
+        purposePrefs.workStudy, purposePrefs.sns, purposePrefs.callText,
+        purposePrefs.batteryLife, purposePrefs.ruggedness, purposePrefs.aiFeatures
+    ).any { it >= 30 }
+
+    fun isScreenValid(): Boolean = screenPrefs.minInch <= screenPrefs.maxInch
+
+    fun isCameraValid(): Boolean = cameraPrefs.subjects.isNotEmpty()
 }
 
 class BannerViewModel : ViewModel() {

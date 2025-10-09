@@ -32,6 +32,8 @@ import com.example.dnbn_friend.data.BannerRepository
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Brush
 
@@ -39,6 +41,7 @@ import androidx.compose.ui.graphics.Brush
 fun HomeScreen(
     authViewModel: AuthViewModel,
     surveyViewModel: SurveyViewModel,
+    appViewModel: AppViewModel,
     onOpenPhoneRecommendationSurvey: () -> Unit = {},
     onStartSurvey: () -> Unit = {},
     onBannerClick: (Banner) -> Unit = {}
@@ -49,6 +52,7 @@ fun HomeScreen(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
+            .verticalScroll(rememberScrollState())
     ) {
         // 상단 헤더
         Row(
@@ -78,9 +82,9 @@ fun HomeScreen(
         
         Spacer(modifier = Modifier.height(32.dp))
 
-        // 앱 전역 선로딩 결과 사용: 중복 로드를 피하고 초기 표시를 빠르게
-        val appViewModel: AppViewModel = viewModel()
+        // 앱 전역 선로딩 결과 사용: 동일 AppViewModel 인스턴스를 공유
         val banners by appViewModel.banners.collectAsState()
+        val isLoading by appViewModel.isLoading.collectAsState()
         if (banners.isNotEmpty()) {
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -107,7 +111,63 @@ fun HomeScreen(
                                 .fillMaxWidth()
                                 .height(360.dp)
                         )
+                        // 다크모드 대비 텍스트 가독성 오버레이
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(360.dp)
+                                .background(
+                                    Brush.verticalGradient(
+                                        colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.35f))
+                                    )
+                                )
+                        )
+                        if (!banner.title.isNullOrEmpty()) {
+                            Text(
+                                text = banner.title ?: "",
+                                color = Color.White,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Medium,
+                                modifier = Modifier
+                                    .align(Alignment.BottomStart)
+                                    .padding(16.dp)
+                            )
+                        }
                     }
+                }
+            }
+            Spacer(modifier = Modifier.height(24.dp))
+        } else if (isLoading) {
+            // 캐러셀 로딩 플레이스홀더 (초기 데이터 지연 시 UI 공백 방지)
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(360.dp)
+                        .background(Color.LightGray.copy(alpha = 0.2f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            }
+            Spacer(modifier = Modifier.height(24.dp))
+        } else {
+            // 빈 상태 처리: 배너 없음
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(160.dp)
+                        .background(Color.LightGray.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("현재 표시할 배너가 없습니다.")
                 }
             }
             Spacer(modifier = Modifier.height(24.dp))

@@ -1,5 +1,8 @@
+@file:OptIn(ExperimentalLayoutApi::class)
+
 package com.example.dnbn_friend.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -22,6 +25,10 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.material3.RangeSlider
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.CheckCircle
 
 @Composable
 fun SurveyScreen(viewModel: SurveyViewModel) {
@@ -32,7 +39,7 @@ fun SurveyScreen(viewModel: SurveyViewModel) {
     ) {
         ProgressIndicator(
             currentStep = viewModel.currentStep,
-            totalSteps = 6
+            totalSteps = 5
         )
         
         Spacer(modifier = Modifier.height(24.dp))
@@ -45,11 +52,10 @@ fun SurveyScreen(viewModel: SurveyViewModel) {
         ) {
             when (viewModel.currentStep) {
                 1 -> BudgetQuestion(viewModel)
-                2 -> BrandQuestion(viewModel)
+                2 -> BrandPriorityQuestion(viewModel)
                 3 -> PurposeQuestion(viewModel)
                 4 -> ScreenSizeQuestion(viewModel)
                 5 -> CameraQuestion(viewModel)
-                6 -> OsPreferenceQuestion(viewModel)
             }
         }
         
@@ -59,11 +65,10 @@ fun SurveyScreen(viewModel: SurveyViewModel) {
             onNext = { viewModel.nextStep() },
             isAnswerSelected = when (viewModel.currentStep) {
                 1 -> viewModel.surveyAnswer.budget.isNotEmpty()
-                2 -> viewModel.selectedBrands.isNotEmpty() || viewModel.surveyAnswer.brand.isNotEmpty()
-                3 -> viewModel.selectedPurposes.isNotEmpty() || viewModel.surveyAnswer.purpose.isNotEmpty()
-                4 -> viewModel.surveyAnswer.screenSize.isNotEmpty()
-                5 -> viewModel.surveyAnswer.cameraImportance.isNotEmpty()
-                6 -> viewModel.osPreference.isNotEmpty()
+                2 -> viewModel.isBrandValid() || viewModel.selectedBrands.isNotEmpty()
+                3 -> viewModel.isPurposeValid()
+                4 -> viewModel.isScreenValid()
+                5 -> viewModel.isCameraValid()
                 else -> false
             }
         )
@@ -109,30 +114,34 @@ fun SelectionCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val borderColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+    val bg = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f) else MaterialTheme.colorScheme.surface
     Card(
         modifier = modifier
             .fillMaxWidth()
             .padding(vertical = 6.dp)
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) MaterialTheme.colorScheme.primary else Color.White
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        colors = CardDefaults.cardColors(containerColor = bg),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        border = BorderStroke(1.dp, borderColor)
     ) {
-        Box(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(18.dp),
-            contentAlignment = Alignment.Center
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 text = text,
                 fontSize = 16.sp,
-                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                color = if (isSelected) Color.White else Color.Black,
-                textAlign = TextAlign.Center
+                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f)
             )
+            if (isSelected) {
+                Icon(Icons.Rounded.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            }
         }
     }
 }
@@ -214,24 +223,37 @@ fun BudgetQuestion(viewModel: SurveyViewModel) {
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun BrandQuestion(viewModel: SurveyViewModel) {
-    Text(
-        text = "선호하는 브랜드를 선택하세요 (복수 선택 가능)",
-        fontSize = 24.sp,
-        fontWeight = FontWeight.Bold,
-        modifier = Modifier.padding(bottom = 16.dp)
-    )
-    val brands = listOf("Apple", "Samsung", "Google", "Nothing", "OnePlus", "Xiaomi")
-    FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
+fun BrandPriorityQuestion(viewModel: SurveyViewModel) {
+    Column {
+        Text(
+            text = "선호 브랜드 우선도(0~100)",
+            fontSize = 24.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+        val brands = listOf("Apple", "Samsung", "Google", "Nothing", "OnePlus", "Xiaomi")
         brands.forEach { brand ->
-            FilterChip(
-                selected = brand in viewModel.selectedBrands,
-                onClick = { viewModel.toggleBrand(brand) },
-                label = { Text(brand) }
-            )
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 6.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.6f))
+            ) {
+                Column(Modifier.padding(12.dp)) {
+                    Text(brand, fontWeight = FontWeight.SemiBold)
+                    val v = viewModel.brandPriority[brand] ?: 0
+                    Slider(
+                        value = v.toFloat(),
+                        onValueChange = { viewModel.setBrandScore(brand, it.toInt()) },
+                        valueRange = 0f..100f,
+                        steps = 100
+                    )
+                    Text("$v / 100", color = Color.Gray, fontSize = 12.sp)
+                }
+            }
         }
     }
 }
@@ -239,45 +261,194 @@ fun BrandQuestion(viewModel: SurveyViewModel) {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun PurposeQuestion(viewModel: SurveyViewModel) {
-    Text(
-        text = "주요 사용 목적을 선택하세요 (복수 선택 가능)",
-        fontSize = 24.sp,
-        fontWeight = FontWeight.Bold,
-        modifier = Modifier.padding(bottom = 16.dp)
-    )
-    val purposes = listOf("게임", "사진/영상", "영상", "업무/공부", "SNS", "통화/문자", "배터리 지속")
-    FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        purposes.forEach { p ->
-            FilterChip(
-                selected = p in viewModel.selectedPurposes,
-                onClick = { viewModel.togglePurpose(p) },
-                label = { Text(p) }
-            )
+    val p = viewModel.purposePrefs
+    Column {
+        Text(
+            text = "휴대폰 사용 목적 중요도",
+            fontSize = 24.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+        PurposeSlider("게임", p.gaming) { s -> viewModel.updatePurpose { copy(gaming = s) } }
+        PurposeSlider("사진 촬영", p.photo) { s -> viewModel.updatePurpose { copy(photo = s) } }
+        PurposeSlider("영상 시청(유튜브/OTT)", p.videoStream) { s -> viewModel.updatePurpose { copy(videoStream = s) } }
+        PurposeSlider("업무/공부", p.workStudy) { s -> viewModel.updatePurpose { copy(workStudy = s) } }
+        PurposeSlider("SNS", p.sns) { s -> viewModel.updatePurpose { copy(sns = s) } }
+        PurposeSlider("통화/문자", p.callText) { s -> viewModel.updatePurpose { copy(callText = s) } }
+        PurposeSlider("배터리 지속", p.batteryLife) { s -> viewModel.updatePurpose { copy(batteryLife = s) } }
+        PurposeSlider("내구성/IP", p.ruggedness) { s -> viewModel.updatePurpose { copy(ruggedness = s) } }
+        PurposeSlider("AI 기능", p.aiFeatures) { s -> viewModel.updatePurpose { copy(aiFeatures = s) } }
+    }
+}
+
+@Composable
+private fun PurposeSlider(label: String, value: Int, onChange: (Int) -> Unit) {
+    Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(label, fontWeight = FontWeight.SemiBold)
+            Text("$value", color = Color.Gray, fontSize = 12.sp)
+        }
+        Slider(
+            value = value.toFloat(),
+            onValueChange = { onChange(it.toInt()) },
+            valueRange = 0f..100f,
+            steps = 100
+        )
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun ScreenSizeQuestion(viewModel: SurveyViewModel) {
+    val s = viewModel.screenPrefs
+    Column {
+        Text(
+            text = "화면/휴대성 선호",
+            fontSize = 24.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+        Text("원하는 화면 크기(인치)", fontWeight = FontWeight.SemiBold)
+        RangeSlider(
+            value = s.minInch..s.maxInch,
+            onValueChange = { r -> viewModel.updateScreen { copy(minInch = r.start, maxInch = r.endInclusive) } },
+            valueRange = 5.8f..7.2f,
+            steps = 14
+        )
+        Text(String.format("%.1f\" ~ %.1f\"", s.minInch, s.maxInch), color = Color.Gray, fontSize = 12.sp)
+        Spacer(Modifier.height(8.dp))
+        LabeledSlider("가벼움 중요도", s.weightImportance) { v -> viewModel.updateScreen { copy(weightImportance = v) } }
+        LabeledSlider("한손 사용 중요도", s.oneHandUse) { v -> viewModel.updateScreen { copy(oneHandUse = v) } }
+        Spacer(Modifier.height(8.dp))
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilterChip(selected = s.flatDisplay, onClick = { viewModel.updateScreen { copy(flatDisplay = !flatDisplay) } }, label = { Text(if (s.flatDisplay) "플랫 선호" else "엣지 허용") })
+            FilterChip(selected = s.highRefresh, onClick = { viewModel.updateScreen { copy(highRefresh = !highRefresh) } }, label = { Text("고주사율 선호") })
+            FilterChip(selected = s.pwmSensitive, onClick = { viewModel.updateScreen { copy(pwmSensitive = !pwmSensitive) } }, label = { Text("PWM 민감") })
         }
     }
 }
 
 @Composable
-fun ScreenSizeQuestion(viewModel: SurveyViewModel) {
-    QuestionLayout(
-        title = "화면 크기와 무게는 어떤 것을 선호하시나요?",
-        options = listOf("작고 가벼움", "일반", "큰 화면"),
-        selectedOption = viewModel.surveyAnswer.screenSize,
-        onOptionSelected = { viewModel.updateAnswer(4, it) }
-    )
+private fun LabeledSlider(label: String, value: Int, onChange: (Int) -> Unit) {
+    Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(label, fontWeight = FontWeight.SemiBold)
+            Text("$value", color = Color.Gray, fontSize = 12.sp)
+        }
+        Slider(value = value.toFloat(), onValueChange = { onChange(it.toInt()) }, valueRange = 0f..100f, steps = 100)
+    }
 }
 
 @Composable
 fun CameraQuestion(viewModel: SurveyViewModel) {
-    QuestionLayout(
-        title = "카메라 성능이 얼마나 중요하신가요?",
-        options = listOf("매우 중요", "보통", "중요하지 않음"),
-        selectedOption = viewModel.surveyAnswer.cameraImportance,
-        onOptionSelected = { viewModel.updateAnswer(5, it) }
-    )
+    val c = viewModel.cameraPrefs
+    Column {
+        Text(
+            text = "카메라 선호",
+            fontSize = 24.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+        Text("자주 찍는 대상(복수)", fontWeight = FontWeight.SemiBold)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            SurveyViewModel.CameraSubject.values().forEach { s ->
+                val selected = s in c.subjects
+                FilterChip(
+                    selected = selected,
+                    onClick = {
+                        viewModel.updateCamera { copy(subjects = if (selected) subjects - s else subjects + s) }
+                    },
+                    label = { Text(subjectToKo(s)) }
+                )
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        LabeledSlider("줌 중요도", c.zoomImportance) { v -> viewModel.updateCamera { copy(zoomImportance = v) } }
+        LabeledSlider("접사 중요도", c.macroImportance) { v -> viewModel.updateCamera { copy(macroImportance = v) } }
+        LabeledSlider("인물 중요도", c.portraitImportance) { v -> viewModel.updateCamera { copy(portraitImportance = v) } }
+        LabeledSlider("야간 중요도", c.nightImportance) { v -> viewModel.updateCamera { copy(nightImportance = v) } }
+        LabeledSlider("AF 추적 중요도", c.afTrackingImportance) { v -> viewModel.updateCamera { copy(afTrackingImportance = v) } }
+        LabeledSlider("손떨림 보정 중요도", c.oisEisImportance) { v -> viewModel.updateCamera { copy(oisEisImportance = v) } }
+        Spacer(Modifier.height(6.dp))
+        Text("원하는 광학 줌(최소)", fontWeight = FontWeight.SemiBold)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf(2,3,5,10).forEach { x ->
+                FilterChip(
+                    selected = c.requiredOpticalZoomX == x,
+                    onClick = { viewModel.updateCamera { copy(requiredOpticalZoomX = x) } },
+                    label = { Text("${x}x 이상") }
+                )
+            }
+        }
+        Spacer(Modifier.height(6.dp))
+        Text("색감/톤", fontWeight = FontWeight.SemiBold)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            SurveyViewModel.ColorTone.values().forEach { t ->
+                FilterChip(
+                    selected = c.colorTone == t,
+                    onClick = { viewModel.updateCamera { copy(colorTone = t) } },
+                    label = { Text(colorToneToKo(t)) }
+                )
+            }
+        }
+        Spacer(Modifier.height(6.dp))
+        Text("촬영 스타일", fontWeight = FontWeight.SemiBold)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            SurveyViewModel.ShootingStyle.values().forEach { st ->
+                FilterChip(
+                    selected = c.shootingStyle == st,
+                    onClick = { viewModel.updateCamera { copy(shootingStyle = st) } },
+                    label = { Text(shootingStyleToKo(st)) }
+                )
+            }
+        }
+        Spacer(Modifier.height(6.dp))
+        Text("동영상", fontWeight = FontWeight.SemiBold)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            SurveyViewModel.VideoRes.values().forEach { r ->
+                FilterChip(
+                    selected = c.videoResolution == r,
+                    onClick = { viewModel.updateCamera { copy(videoResolution = r) } },
+                    label = { Text(videoResToKo(r)) }
+                )
+            }
+            FilterChip(selected = c.hdrVideo, onClick = { viewModel.updateCamera { copy(hdrVideo = !hdrVideo) } }, label = { Text("HDR") })
+            FilterChip(selected = c.stabilizationPriority, onClick = { viewModel.updateCamera { copy(stabilizationPriority = !stabilizationPriority) } }, label = { Text("안정화 우선") })
+        }
+    }
+}
+
+private fun subjectToKo(s: SurveyViewModel.CameraSubject) = when (s) {
+    SurveyViewModel.CameraSubject.People -> "사람"
+    SurveyViewModel.CameraSubject.Kids -> "아이"
+    SurveyViewModel.CameraSubject.Pets -> "반려동물"
+    SurveyViewModel.CameraSubject.Food -> "음식"
+    SurveyViewModel.CameraSubject.Landscape -> "풍경"
+    SurveyViewModel.CameraSubject.City -> "도심/건축"
+    SurveyViewModel.CameraSubject.NightSky -> "야경/천체"
+    SurveyViewModel.CameraSubject.Sports -> "스포츠/동체"
+    SurveyViewModel.CameraSubject.Documents -> "문서/필기"
+}
+
+private fun colorToneToKo(t: SurveyViewModel.ColorTone) = when (t) {
+    SurveyViewModel.ColorTone.Natural -> "자연"
+    SurveyViewModel.ColorTone.Vivid -> "선명"
+    SurveyViewModel.ColorTone.Contrast -> "대비 강함"
+    SurveyViewModel.ColorTone.Warm -> "따뜻함"
+    SurveyViewModel.ColorTone.Cool -> "차가움"
+}
+
+private fun shootingStyleToKo(s: SurveyViewModel.ShootingStyle) = when (s) {
+    SurveyViewModel.ShootingStyle.PointAndShoot -> "간편 자동"
+    SurveyViewModel.ShootingStyle.SocialReady -> "SNS 즉시"
+    SurveyViewModel.ShootingStyle.ProManualRaw -> "프로/RAW"
+}
+
+private fun videoResToKo(r: SurveyViewModel.VideoRes) = when (r) {
+    SurveyViewModel.VideoRes.R4K30 -> "4K 30"
+    SurveyViewModel.VideoRes.R4K60 -> "4K 60"
+    SurveyViewModel.VideoRes.R4K120 -> "4K 120"
+    SurveyViewModel.VideoRes.R8K24 -> "8K 24"
 }
 
 @Composable

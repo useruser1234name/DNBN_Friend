@@ -82,9 +82,7 @@ fun MainNavigation(appViewModel: AppViewModel) {
     val locationViewModel: LocationViewModel = viewModel(
         factory = LocationViewModel.provideFactory(LocalContext.current)
     )
-    androidx.compose.runtime.LaunchedEffect(Unit) {
-        appViewModel.prefetch()
-    }
+    // 프리패치는 Activity onCreate에서 1회 보장됨
 
     NavHost(navController = navController, startDestination = Screen.Login.route) {
         composable(Screen.Login.route) {
@@ -106,6 +104,7 @@ fun MainNavigation(appViewModel: AppViewModel) {
             HomeScreen(
                 authViewModel = authViewModel,
                 surveyViewModel = surveyViewModel,
+                appViewModel = appViewModel,
                 onOpenPhoneRecommendationSurvey = {
                     navController.navigate(Screen.PhoneRecommendationSurvey.route)
                 },
@@ -177,7 +176,7 @@ fun MainNavigation(appViewModel: AppViewModel) {
 
         // 공시설문: 선택 기종은 간단히 첫 번째 추천 기종 기준으로 연결
         composable(Screen.SubsidySurvey.route) { backStackEntry ->
-            val phoneId = backStackEntry.arguments?.getString("phoneId")
+            val phoneId = backStackEntry.arguments?.getString(NavArguments.PHONE_ID)
             val phoneName = DataRepository.phones.find { it.id == phoneId }?.name ?: "선택 기종"
             SubsidySurveyScreen(
                 phoneName = phoneName,
@@ -221,10 +220,10 @@ fun MainNavigation(appViewModel: AppViewModel) {
         composable(
             route = Screen.SubsidyResult.route,
             arguments = listOf(
-                navArgument("phoneId") { type = NavType.StringType }
+                navArgument(NavArguments.PHONE_ID) { type = NavType.StringType }
             )
         ) { backStackEntry ->
-            val phoneId = backStackEntry.arguments?.getString("phoneId") ?: ""
+            val phoneId = backStackEntry.arguments?.getString(NavArguments.PHONE_ID) ?: ""
             SubsidyResultScreen(
                 phoneId = phoneId,
                 viewModel = surveyViewModel,
@@ -240,10 +239,10 @@ fun MainNavigation(appViewModel: AppViewModel) {
         composable(
             route = Screen.PhoneIntro.route,
             arguments = listOf(
-                navArgument("phoneId") { type = NavType.StringType }
+                navArgument(NavArguments.PHONE_ID) { type = NavType.StringType }
             )
         ) { backStackEntry ->
-            val phoneId = backStackEntry.arguments?.getString("phoneId") ?: ""
+            val phoneId = backStackEntry.arguments?.getString(NavArguments.PHONE_ID) ?: ""
             val context = LocalContext.current
             var showSheet by remember { mutableStateOf(false) }
             PhoneIntroScreen(

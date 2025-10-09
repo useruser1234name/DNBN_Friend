@@ -7,9 +7,6 @@ sealed class Screen(val route: String) {
     object Result : Screen("result")
     object PhoneList : Screen("phone_list")
     object PhoneRecommendationSurvey : Screen("phone_recommendation_survey")
-    object PurchaseMethod : Screen("purchase_method/{phoneId}") {
-        fun createRoute(phoneId: String) = "purchase_method/$phoneId"
-    }
     object SubsidySurvey : Screen("subsidy_survey/{phoneId}") {
         fun createRoute(phoneId: String) = "subsidy_survey/$phoneId"
     }
@@ -26,4 +23,5 @@ sealed class Screen(val route: String) {
 
 object NavArguments {
     const val STORE_ID = "storeId"
+    const val PHONE_ID = "phoneId"
 }

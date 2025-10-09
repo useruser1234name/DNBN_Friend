@@ -81,6 +81,12 @@ dependencies {
     implementation("com.google.firebase:firebase-appcheck-ktx")
     debugImplementation("com.google.firebase:firebase-appcheck-debug:17.1.0")
 
+    // JSON
+    implementation("com.google.code.gson:gson:2.11.0")
+
+    // OkHttp for custom timeouts in image prefetch
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+
     // ViewModel
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.7.0")
